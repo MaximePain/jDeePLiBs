@@ -4,30 +4,47 @@
 
 function serv(){
     
+    this.app = require('express')();
+    this.server = require('http').createServer(this.app);
+    this.io = require('socket.io').listen(this.server);
+    this.fs = require('fs');
+    this.express = require('express');
+    this.toGetAr = [];
     
-    this.start = function(){
+    
+    function get(arg1, arg2){
+        this.arg1 = arg1;
+        this.arg2 = arg2;
         
-        var app = require('express')(),
-            server = require('http').createServer(app),
-            io = require('socket.io').listen(server),
-            //io2 = require('socket.io')(3000),
-            //redis = require('socket.io-redis'),
-            //rent = require('ent'), // Permet de bloquer les caractères HTML (sécurité équivalente à htmlentities en PHP)
-            fs = require('fs'),
-            express = require('express'),
-            fps = 100;
+        this.start = function(app, arg1, arg2){
+            app.get(arg1, function(req, res){
+                res.render(arg2);
+                res.end();
+            });
+        }
+    }
+    
+    
+    this.addGet = function(rep1, rep2){
+        this.toGetAr.push(new get(rep1, rep2));
+    };
+    this.start = function(port){
+        for(var i = 0; i < this.toGetAr.length; i++)
+            {
+                this.toGetAr[i].start(this.app, this.toGetAr[i].arg1, this.toGetAr[i].arg2);
+            }
         
-        app.get('/', function(req, res){
-            res.render("index.ejs");
-            res.end();
-        });
+        this.app.use(this.express.static(__dirname));
         
-        io.on('connection', function (socket) {
+        this.io.on('connection', function (socket) {
             console.log('Un client est connecté !');
         });
         
-        server.listen(8080);
+        this.server.listen(port);
     };
+    
+    
+    
 }
 
 exports.serv = serv;
