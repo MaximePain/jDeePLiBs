@@ -1,5 +1,5 @@
 function Rect(x, y, hauteur, largeur, context, color, stroke, texture) {
-    "use strict";
+    
     this.type = "Rect";
     this.boundingType = "Rect";
     
@@ -23,7 +23,7 @@ function Rect(x, y, hauteur, largeur, context, color, stroke, texture) {
                         this.context.fillRect(this.x, this.y, this.largeur, this.hauteur);
                     }
                 else{
-                    context.drawImage(this.texture, this.x, this.y);
+                    context.drawImage(this.texture, this.x, this.y, largeur, hauteur);
                 }
             }
     };
@@ -54,3 +54,4 @@ function Rect(x, y, hauteur, largeur, context, color, stroke, texture) {
               }
     };
 }
+
