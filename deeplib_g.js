@@ -55,3 +55,5 @@ function Rect(x, y, hauteur, largeur, context, color, stroke, texture) {
     };
 }
 
+exports.Rect = Rect;
+
