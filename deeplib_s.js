@@ -93,4 +93,5 @@ function serv(){
     
 }
 
-exports.serv = serv;
+if(typeof exports !== 'undefined')
+   exports.serv = serv;
