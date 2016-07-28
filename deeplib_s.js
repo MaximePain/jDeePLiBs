@@ -37,12 +37,7 @@ function serv(){
     this.nbPlayer = 0;
     this.toGetAr = [];
     this.game = [];
-    
-    this.socket;
-    
-    this.yoplay = function(){
-        console.log(this.yop);
-    }
+
     
     function Get(arg1, arg2){
         this.arg1 = arg1;
@@ -69,9 +64,6 @@ function serv(){
                     res.end();
                 });
             }
-        };
-        this.test = function(){
-            console.log('42');
         };
     }
     
