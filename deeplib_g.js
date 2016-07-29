@@ -49,19 +49,25 @@ function Rect(x, y, hauteur, largeur, margin, context, color, stroke, texture) {
         this.x = x;
         this.y = y;
     };
-    this.boundingPoint = function (x, y) {
-        if( ( ( x <= (this.x + this.largeur + this.margin) ) && ( x >= this.x - this.margin) ) && ( ( y <= (this.y + this.hauteur + this.margin) ) && ( y >= this.y - this.margin) ) )
+    this.boundingPoint = function (x, y, cotdgF, cothbF) {
+        var cotdg = cotdgF || 0;
+        var cothb = cothbF || 0;
+        if( ( ( x <= (this.x + this.largeur + this.margin + cotdg) ) && ( x >= this.x - this.margin - cotdg) ) && ( ( y <= (this.y + this.hauteur + this.margin + cothb) ) && ( y >= this.y - this.margin - cothb) ) )
             return true;
         else
             return false; 
     };
-    this.boundingObj = function (object) {
+    this.boundingObj = function (object, cotG, cotD, cotH, cotB) {
+        var cotG = cotG || 0;
+        var cotD = cotD || 0;
+        var cotH = cotH || 0;
+        var cotB = cotB || 0;
           if(object.boundingType == "Rect")
               {
-                  if(object.x >= this.x + this.largeur + this.margin
-                     || object.x + object.largeur <= this.x - this.margin
-                     || object.y >= this.y + this.hauteur + this.margin
-                     || object.y + object.hauteur <= this.y - this.margin)
+                  if(object.x >= this.x + this.largeur + this.margin + cotD
+                     || object.x + object.largeur <= this.x - this.margin - cotG
+                     || object.y >= this.y + this.hauteur + this.margin + cotB
+                     || object.y + object.hauteur <= this.y - this.margin - cotH)
                       return false;
                   else 
                       return true;
