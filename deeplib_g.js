@@ -1,20 +1,24 @@
-var collisionRectRect = function(A, B, cotG, cotD, cotH, cotB){
-    var cotG = cotG || 0;
-    var cotD = cotD || 0;
-    var cotH = cotH || 0;
-    var cotB = cotB || 0;
-    if(B.x - B.margin >= A.x + A.largeur + A.margin + cotD
-       || B.x + B.largeur + B.margin <= A.x - A.margin - cotG
-       || B.y - B.margin >= A.y + A.hauteur + A.margin + cotB
-       || B.y + B.hauteur + B.margin <= A.y - A.margin - cotH)
+var collisionRectRect = function(A, B){
+    if(B.x - B.margin >= A.x + A.largeur + A.margin
+       || B.x + B.largeur + B.margin <= A.x - A.margin
+       || B.y - B.margin >= A.y + A.hauteur + A.margin
+       || B.y + B.hauteur + B.margin <= A.y - A.margin)
         return false;
     else 
         return true;
 };
 
+var collisionCercCerc = function(C1, C2){
+    var d = (C1.x-C2.x)*(C1.x-C2.x) + (C1.y-C2.y)*(C1.y-C2.y);
+    if (d > (C1.rayon + C2.rayon)*(C1.rayon + C2.rayon))
+        return false;
+    else
+        return true;
+};
+
 var collisionCerclePoint = function(C, x, y){
-    var d2 = (x-C.x)*(x-C.x) + (y-C.y)*(y-C.y);
-    if (d2 > C.rayon * C.rayon)
+    var d = (x-C.x)*(x-C.x) + (y-C.y)*(y-C.y);
+    if (d > C.rayon * C.rayon)
         return false;
     else
         return true;
@@ -34,16 +38,16 @@ var ProjectionSurSegment = function(Cx,Cy,Ax,Ay,Bx,By){ //merci sdz (openclassro
    return true;
 };
 
-var collisionRectCercle = function(R, C, cotG, cotD, cotH, cotB){
+var collisionRectCercle = function(R, C){
     var boxCercle = C.getBox();
     
     if(!collisionRectRect(R, boxCercle))
         return false;
     
-    if(C.boundingPoint(R.x - cotG, R.y - cotB)
-       || C.boundingPoint(R.x - cotG, R.y + R.hauteur + cotB)
-       || C.boundingPoint(R.x + R.largeur + cotD, R.y - cotB)
-       || C.boundingPoint(R.x + R.largeur + cotD, R.y + R.hauteur + cotB))
+    if(C.boundingPoint(R.x, R.y)
+       || C.boundingPoint(R.x, R.y + R.hauteur)
+       || C.boundingPoint(R.x + R.largeur, R.y)
+       || C.boundingPoint(R.x + R.largeur, R.y + R.hauteur))
         return true;
     
     if(R.boundingPoint(C.x, C.y))
@@ -122,27 +126,19 @@ function Rect(x, y, hauteur, largeur, /*margin,*/ context, color, stroke, textur
         this.x = x;
         this.y = y;
     };
-    this.boundingPoint = function (x, y, cotG, cotD, cotH, cotB) {
-        var cotG = cotG || 0;
-        var cotD = cotD || 0;
-        var cotH = cotH || 0;
-        var cotB = cotB || 0;
-        if( ( ( x <= (this.x + this.largeur + this.margin + cotD) ) && ( x >= this.x - this.margin - cotG) ) && ( ( y <= (this.y + this.hauteur + this.margin + cotH) ) && ( y >= this.y - this.margin - cotB) ) )
+    this.boundingPoint = function (x, y) {
+        if( ( ( x <= (this.x + this.largeur + this.margin) ) && ( x >= this.x - this.margin) ) && ( ( y <= (this.y + this.hauteur + this.margin) ) && ( y >= this.y - this.margin) ) )
             return true;
         else
             return false; 
     };
-    this.boundingObj = function (object, cotG, cotD, cotH, cotB) {
-        var cotG = cotG || 0;
-        var cotD = cotD || 0;
-        var cotH = cotH || 0;
-        var cotB = cotB || 0;
+    this.boundingObj = function (object) {
         if(object.boundingType == "Rect")
         {
-            return collisionRectRect(this, object, cotG, cotD, cotH, cotB);
+            return collisionRectRect(this, object);
         }
         else if(object.boundingType == "Cercle"){
-            return collisionRectCercle(this, object, cotG, cotD, cotH, cotB);
+            return collisionRectCercle(this, object);
         }
     };
 }
@@ -209,8 +205,11 @@ function Cercle(x, y, rayon, context, color, stroke, texture){
         return collisionCerclePoint(this, x, y);
         
     };
-    this.boundingObj = function(object, cotG, cotD, cotH, cotB){
-        
+    this.boundingObj = function(object){
+        if(object.boundingType == "Rect")
+            return collisionRectCercle(object, this);
+        else if(object.boundingType == "Cercle")
+            return collisionCercCerc(this, object);
     };
     
 }
