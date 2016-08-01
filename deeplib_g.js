@@ -1,3 +1,25 @@
+function getXMLHttpRequest() {
+	var xhr = null;
+	
+	if (window.XMLHttpRequest || window.ActiveXObject) {
+		if (window.ActiveXObject) {
+			try {
+				xhr = new ActiveXObject("Msxml2.XMLHTTP");
+			} catch(e) {
+				xhr = new ActiveXObject("Microsoft.XMLHTTP");
+			}
+		} else {
+			xhr = new XMLHttpRequest(); 
+		}
+	} else {
+		alert("Votre navigateur ne supporte pas l'objet XMLHTTPRequest...");
+		return null;
+	}
+	
+	return xhr;
+}
+
+
 var collisionRectRect = function(A, B){
     if(B.x - B.margin >= A.x + A.largeur + A.margin
        || B.x + B.largeur + B.margin <= A.x - A.margin
@@ -82,10 +104,11 @@ function Graph(context, color){
     };
 }
 
-function Rect(x, y, hauteur, largeur, /*margin,*/ context, color, stroke, texture) {
+function Rect(x, y, hauteur, largeur, /*margin,*/ context, color, stroke, texture, tile, tileX, tileY, tileLarg, tileHaut) {
     
     this.type = "Rect";
     this.boundingType = "Rect";
+    this.id = "Rect";
     
     this.x = x;
     this.y = y;
@@ -97,20 +120,33 @@ function Rect(x, y, hauteur, largeur, /*margin,*/ context, color, stroke, textur
     this.context = context;
     this.color = color;
     this.stroke = stroke || false;
-    this.texture = new Image();
-    this.texture.src = texture || "yop";
     
-    this.d2 = 42;
+    this.tile = tile || false;
+    
+    this.texture = texture;
+    this.textureSrc = texture || "yop";
+    
+    
+    this.tileX = tileX || 0;
+    this.tileY = tileY || 0;
+    this.tileLarg = tileLarg || 0;
+    this.tileHaut = tileHaut || 0;
+    
+    
     
     this.draw = function () {
         if (!this.stroke) {
-                if (this.texture.src != "yop")
+                if (this.textureSrc == "yop")
                     {
                         this.context.fillStyle = this.color;
                         this.context.fillRect(this.x, this.y, this.largeur, this.hauteur);
                     }
                 else{
-                    context.drawImage(this.texture, this.x, this.y, largeur, hauteur);
+                    if(!tile)
+                        this.context.drawImage(this.texture, this.x, this.y, largeur, hauteur);
+                    else{
+                        this.context.drawImage(this.texture, this.tileX, this.tileY, this.largeur, this.hauteur, this.x, this.y, this.largeur, this.hauteur);
+                    }
                 }
             }
         else{
@@ -162,24 +198,26 @@ function Cercle(x, y, rayon, context, color, stroke, texture){
     this.color = color;
     this.stroke = stroke || false;
     this.texture = new Image();
-    this.texture.src = texture || "yop";
+    this.textureSrc = texture || "yop";
+    this.texture.src = this.textureSrc;
+    
     
     this.draw = function () {
         if (!this.stroke) {
-                if (this.texture.src != "yop")
+                if (this.textureSrc == "yop")
                     {
                         this.context.fillStyle = this.color;
-                        this.context.beginPath(); // La bouche, un arc de cercle
+                        this.context.beginPath();
                         this.context.arc(this.x, this.y, this.rayon, 0, Math.PI * 2);
                         this.context.fill();
                     }
                 else{
-                    context.drawImage(this.texture, this.x, this.y, largeur, hauteur);
+
                 }
             }
         else{
             this.context.strokeStyle = this.color;
-            this.context.beginPath(); // La bouche, un arc de cercle
+            this.context.beginPath();
             this.context.arc(this.x, this.y, this.rayon, 0, Math.PI * 2);
             this.context.stroke();
         }
@@ -214,10 +252,98 @@ function Cercle(x, y, rayon, context, color, stroke, texture){
     
 }
 
+
+
+function Layer(taille, tileset, context){ //tile = image
+    this.taille = taille;
+    this.tile = tileset;
+    this.context = context;
+        
+    this.obj = [];
+        
+    this.createObj = function(xPos, yPos, taille, num, type){
+        var objType = type || "Rect";
+        var xBrute = num % ( this.tile.width / taille );
+        if(xBrute == 0)
+            xBrute = ( this.tile.width / taille );
+        var yBrute = Math.ceil(num / ( this.tile.width / taille ) );
+               
+        var x = (xBrute - 1) * taille;
+        var y = (yBrute - 1) * taille;
+            
+        this.obj.push(new Rect(xPos, yPos, taille, taille, this.context, "NULL", false, this.tile, true, x, y, taille, taille));
+        this.obj[this.obj.length - 1].id = objType;
+    };
+        
+    this.draw = function(){
+        
+        for(var i = 0; i < this.obj.length; i++)
+        {
+            this.obj[i].draw();
+        }
+    };
+    
+    this.createLayer = function(terrain){
+        for(var i = 0; i < terrain.length; i++)
+            {   
+                var y = i * this.taille;
+                for(var j = 0; j < terrain[i].length; j++){
+                    this.createObj(j * this.taille, y, this.taille, terrain[i][j]);
+                }
+            }
+    };
+}
+
+function TileMap(path, xhr, context){
+    this.path = path;
+    this.layer = [];
+    this.xhr = xhr;
+    this.context = context;
+    this.image = new Image();
+    
+    this.parse = function(){
+        this.xhr.open("GET", this.path, false);    //merci encore sdz :P
+        this.xhr.send(null);
+        if(this.xhr.readyState != 4 || (this.xhr.status != 200 && this.xhr.status != 0)) // Code == 0 en local
+            throw new Error("Impossible de charger la carte nommée \"" + nom + "\" (code HTTP : " + xhr.status + ").");
+        var mapJsonData = this.xhr.responseText;
+        
+        var mapData = JSON.parse(mapJsonData);
+        
+        var nbLayer = mapData.nbLayer;
+        var taille = mapData.taille;
+        var tileset = mapData.tileset;
+        var terrain = mapData.terrain;
+        
+        this.image.src = tileset;
+        
+        this.start = function(layer, image, context){
+            for(var i = 0; i < nbLayer; i++)
+            {
+                layer.push(new Layer(taille, image, context));
+                layer[i].createLayer(terrain[i]);
+            }
+        };
+        
+        this.image.addEventListener('load', this.start(this.layer, this.image, this.context));
+    };
+    
+    this.draw = function(){
+        for(var i = 0; i < this.layer.length; i++)
+            {
+                this.layer[i].draw();
+            }
+    };
+    
+}
+
+
+
 if (typeof exports !== 'undefined')
     {
         exports.Rect = Rect;
         exports.Cercle = Cercle;
+        exports.TileMap = TileMap;
     }
 
 
