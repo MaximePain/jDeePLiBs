@@ -1,25 +1,3 @@
-function getXMLHttpRequest() {
-	var xhr = null;
-	
-	if (window.XMLHttpRequest || window.ActiveXObject) {
-		if (window.ActiveXObject) {
-			try {
-				xhr = new ActiveXObject("Msxml2.XMLHTTP");
-			} catch(e) {
-				xhr = new ActiveXObject("Microsoft.XMLHTTP");
-			}
-		} else {
-			xhr = new XMLHttpRequest(); 
-		}
-	} else {
-		alert("Votre navigateur ne supporte pas l'objet XMLHTTPRequest...");
-		return null;
-	}
-	
-	return xhr;
-}
-
-
 var collisionRectRect = function(A, B){
     if(B.x - B.margin >= A.x + A.largeur + A.margin
        || B.x + B.largeur + B.margin <= A.x - A.margin
@@ -80,6 +58,18 @@ var collisionRectCercle = function(R, C){
     if (projvertical || projhorizontal)
         return true;
     return false;
+};
+
+var numTile = function(num, imageLarg, tileLarg, tileHaut){
+    var xBrute = num % ( imageLarg / tileLarg );
+    if(xBrute == 0)
+        xBrute = ( imageLarg / tileLarg );
+    var yBrute = Math.ceil(num / ( imageLarg / tileLarg ) );
+               
+    var x = (xBrute - 1) * tileLarg;
+    var y = (yBrute - 1) * tileHaut;
+    
+    return {x: x, y: y};
 };
 
 
@@ -143,9 +133,9 @@ function Rect(x, y, hauteur, largeur, /*margin,*/ context, color, stroke, textur
                     }
                 else{
                     if(!tile)
-                        this.context.drawImage(this.texture, this.x, this.y, largeur, hauteur);
+                        this.context.drawImage(this.texture, this.x, this.y, this.largeur, this.hauteur);
                     else{
-                        this.context.drawImage(this.texture, this.tileX, this.tileY, this.largeur, this.hauteur, this.x, this.y, this.largeur, this.hauteur);
+                        this.context.drawImage(this.texture, this.tileX, this.tileY, this.tileLarg, this.tileHaut, this.x, this.y, this.largeur, this.hauteur);
                     }
                 }
             }
@@ -252,27 +242,126 @@ function Cercle(x, y, rayon, context, color, stroke, texture){
     
 }
 
+function AnimSet(sprite, num1, num2, tileLarg, tileHaut, time){
+    this.sprite = sprite;
+    this.num1 = num1;
+    this.num2 = num2;
+    this.num = {Value:  this.num1};
+    
+    this.animStop = false;
+    
+    this.time = [];
+    for(var i = num1; i < num2 + 1; i++)
+        this.time.push(time);
+
+    
+    this.tileLarg = tileLarg;
+    this.tileHaut = tileHaut;
+    
+    /*this.change = function(num, num1, num2){
+        if(num.Value + num1 < num2)
+                num.Value++;
+        else
+                num.Value = num1;
+    };*/
+    
+    this.anim = function(obj){
+        var xy = numTile(obj.num.Value, obj.sprite.texture.width, obj.tileLarg, obj.tileHaut);
+        var x = xy.x;
+        var y = xy.y;
+        
+        obj.sprite.tileLarg = obj.tileLarg;
+        obj.sprite.tileHaut = obj.tileHaut;
+        obj.sprite.tileX = x;
+        obj.sprite.tileY = y;
+        
+        console.log('num: ' + obj.num.Value + '  time: ' +  obj.time[obj.num.Value]);
+        
+        if(obj.num.Value + obj.num1 < obj.num2)
+                obj.num.Value++;
+        else
+                obj.num.Value = obj.num1;
+        
+        if(obj.animStop)
+            setTimeout(obj.anim, obj.time[obj.num.Value], obj);
+    };
+}
+
+function AnimSprite(x, y, hauteur, largeur, context, tile, tileHaut, tileLarg){
+    this.x = x;
+    this.y = y;
+    this.hauteur = hauteur;
+    this.largeur = largeur;
+    this.context = context;
+    this.tile = tile;
+    this.tileLarg = tileLarg;
+    this.tileHaut = tileHaut;
+    
+    this.globalTime = 100;
+    this.animLs = {};
+    this.currentAnim = {Value: "NULL"};
+    
+    this.sprite = new Rect(this.x, this.y, this.hauteur, this.largeur, this.context, "black", false, this.tile, true);
+
+    
+    this.animStart = function(){
+        this.animLs[this.currentAnim.Value].stop = false;
+        this.animLs[this.currentAnim.Value].anim(this.animLs[this.currentAnim.Value]);
+    };
+    
+    this.stopAnim = function(){
+        this.animLs[this.currentAnim.Value].stop = true;
+    };
+    
+    this.addAnim = function(name, num1, num2, time){
+        this.animLs[name] = new AnimSet(this.sprite, num1, num2, this.tileLarg, this.tileHaut, time);
+    };
+    
+    this.set = function(name){
+        this.currentAnim.Value = name;
+    };
+    
+    this.draw = function(){
+        this.sprite.draw();  
+    };
+    
+    //this.interv = setInterval(this.animWhile, this.globalTime, this.animLs, this.currentAnim);
+    
+}
 
 
-function Layer(taille, tileset, context){ //tile = image
+function Layer(taille, tileset, context, hauteur, largeur){ //tile = image
     this.taille = taille;
     this.tile = tileset;
     this.context = context;
+    this.hauteur = hauteur;
+    this.largeur = largeur;
+    
+    if(this.hauteur == -1)
+        this.hauteur = this.taille;
+    if(this.largeur == -1)
+        this.largeur = this.taille;
         
     this.obj = [];
         
     this.createObj = function(xPos, yPos, taille, num, type){
         var objType = type || "Rect";
-        var xBrute = num % ( this.tile.width / taille );
-        if(xBrute == 0)
-            xBrute = ( this.tile.width / taille );
-        var yBrute = Math.ceil(num / ( this.tile.width / taille ) );
+        
+        var xy = numTile(num, this.tile.width, taille, taille);
                
-        var x = (xBrute - 1) * taille;
-        var y = (yBrute - 1) * taille;
-            
-        this.obj.push(new Rect(xPos, yPos, taille, taille, this.context, "NULL", false, this.tile, true, x, y, taille, taille));
-        this.obj[this.obj.length - 1].id = objType;
+        var x = xy.x;
+        var y = xy.y;
+        
+        if(num != -1)
+            {
+                this.obj.push(new Rect(xPos, yPos, this.hauteur, this.largeur, this.context, "NULL", false, this.tile, true, x, y, taille, taille));
+                this.obj[this.obj.length - 1].id = objType;
+            }
+        else{
+            this.obj.push(new Rect(xPos, yPos, this.hauteur, this.largeur, this.context, "rgba(0, 0, 0, 0)"));
+            this.obj[this.obj.length - 1].id = "vide";
+        }
+        
     };
         
     this.draw = function(){
@@ -288,18 +377,21 @@ function Layer(taille, tileset, context){ //tile = image
             {   
                 var y = i * this.taille;
                 for(var j = 0; j < terrain[i].length; j++){
-                    this.createObj(j * this.taille, y, this.taille, terrain[i][j]);
+                    this.createObj(j * this.taille, y, this.taille, terrain[j][i]);
                 }
             }
     };
 }
 
-function TileMap(path, xhr, context){
+function TileMap(path, xhr, context, hauteur, largeur){
     this.path = path;
     this.layer = [];
     this.xhr = xhr;
     this.context = context;
     this.image = new Image();
+    
+    this.hauteur = hauteur || -1;
+    this.largeur = largeur || -1;
     
     this.parse = function(){
         this.xhr.open("GET", this.path, false);    //merci encore sdz :P
@@ -313,19 +405,19 @@ function TileMap(path, xhr, context){
         var nbLayer = mapData.nbLayer;
         var taille = mapData.taille;
         var tileset = mapData.tileset;
-        var terrain = mapData.terrain;
+        var terrain = mapData.map;
         
         this.image.src = tileset;
         
-        this.start = function(layer, image, context){
+        this.start = function(layer, image, context, hauteur, largeur){
             for(var i = 0; i < nbLayer; i++)
             {
-                layer.push(new Layer(taille, image, context));
+                layer.push(new Layer(taille, image, context, hauteur, largeur));
                 layer[i].createLayer(terrain[i]);
             }
         };
         
-        this.image.addEventListener('load', this.start(this.layer, this.image, this.context));
+        this.image.addEventListener('load', this.start(this.layer, this.image, this.context, this.hauteur, this.largeur));
     };
     
     this.draw = function(){

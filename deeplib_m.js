@@ -68,3 +68,7 @@ function getXMLHttpRequest() {
 	
 	return xhr;
 }
+
+if(typeof exports !== 'undefined'){
+    exports.getXMLHttpRequest = getXMLHttpRequest; 
+}
