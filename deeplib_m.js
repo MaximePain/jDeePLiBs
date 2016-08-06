@@ -5,7 +5,11 @@ function deepC(){
     //detection key
     var Key = {
         _pressed: {},
-
+            
+            Z: 90,
+            Q: 81,
+            S: 83,
+            D: 68,
             LEFT: 37,
             UP: 38,
             RIGHT: 39,
@@ -28,6 +32,8 @@ function deepC(){
     
     window.addEventListener('keyup', function(event) { Key.onKeyup(event); }, false);
     window.addEventListener('keydown', function(event) { Key.onKeydown(event); }, false);
+    //window.addEventListener('keydown', function(event) { alert(event.keyCode); }, false);
+    
     /*Exemple:
     if(Key.isDown(Key.UP))
              socket.emit('move', {idRoom: idRoom, idNum: idNum, x: Game.player[idNum].x, y: Game.player[idNum].y, direc: "LEFT1"});

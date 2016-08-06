@@ -1,5 +1,5 @@
-var collisionRectRect = function(A, B){
-    if(B.x - B.margin >= A.x + A.largeur + A.margin
+var collisionRectRect = function (A, B) {
+    if (B.x - B.margin >= A.x + A.largeur + A.margin
        || B.x + B.largeur + B.margin <= A.x - A.margin
        || B.y - B.margin >= A.y + A.hauteur + A.margin
        || B.y + B.hauteur + B.margin <= A.y - A.margin)
@@ -94,6 +94,32 @@ function Graph(context, color){
     };
 }
 
+function View(x, y, hauteur, largeur, largIntern, hautIntern, xMap, yMap){ //Intern = echelle
+    this.exist = true;
+    this.x = x;
+    this.y = y;
+    this.largeur = largeur;
+    this.hauteur = hauteur;
+    this.largIntern = largIntern;
+    this.hautIntern = hautIntern;
+    this.xMap = xMap;
+    this.yMap = yMap;
+    
+    this.draw = function(context){
+        context.strokeStyle = 'black';
+        context.strokeRect(this.x, this.y, this.largeur, this.hauteur);  
+    };
+    
+    this.move = function(x, y){
+        this.x += x;
+        this.y += y;
+    };
+    this.moveView = function(x, y){
+        this.xMap += x;
+        this.yMap += y;
+    };
+}
+
 function Rect(x, y, hauteur, largeur, /*margin,*/ context, color, stroke, texture, tile, tileX, tileY, tileLarg, tileHaut) {
     
     this.type = "Rect";
@@ -103,7 +129,11 @@ function Rect(x, y, hauteur, largeur, /*margin,*/ context, color, stroke, textur
     this.x = x;
     this.y = y;
     this.hauteur = hauteur;
+    this.hauteurView = 0;
     this.largeur = largeur;
+    this.largeurView = 0;
+    this.isDraw = true;
+    
     this.margin = 0;
     //this.margin = margin; // a faire
     
@@ -121,26 +151,56 @@ function Rect(x, y, hauteur, largeur, /*margin,*/ context, color, stroke, textur
     this.tileY = tileY || 0;
     this.tileLarg = tileLarg || 0;
     this.tileHaut = tileHaut || 0;
+    this.tileLargView = 0;
     
-    this.draw = function () {
+    this.getCoordView = function(view){
+        return {x: this.x - view.xMap, y: this.y - view.yMap};
+    };
+    
+    this.draw = function (view) {
+        var view = view || {exist: false};
+        var relativCoord = this.getCoordView(view);
+
+        if(view.exist){
+            if(relativCoord.x + this.largeur > view.largeur && relativCoord.x <= view.largeur)
+            {
+                this.largeurView = -(view.largeur - relativCoord.x - this.largeur) 
+                this.tileLargView = ( this.tileLarg - (-(view.largeur - relativCoord.x - this.tileLarg)) ) / (this.largeur / this.tileLarg);
+            }
+            else if(relativCoord.x > view.largeur)
+                this.isDraw = false;
+            else{
+                this.largeurView = 0;
+                this.tileLargView = this.tileLarg;
+            }
+        }
+
+        if(this.isDraw == true){
         if (!this.stroke) {
                 if (this.textureSrc == "yop")
                     {
                         this.context.fillStyle = this.color;
-                        this.context.fillRect(this.x, this.y, this.largeur, this.hauteur);
+                        this.context.fillRect(this.x + view.x - view.xMap, this.y + view.y - view.yMap, this.largeur - this.largeurView, this.hauteur);
                     }
                 else{
-                    if(!tile)
-                        this.context.drawImage(this.texture, this.x, this.y, this.largeur, this.hauteur);
+                    if(!view.exist){
+                        if(!tile)
+                            this.context.drawImage(this.texture, this.x, this.y, this.largeur, this.hauteur);
+                        else{
+                            this.context.drawImage(this.texture, this.tileX, this.tileY, this.tileLarg, this.tileHaut, this.x + view.x, this.y, this.largeur - this.largeurView, this.hauteur);
+                        }
+                    }
                     else{
-                        this.context.drawImage(this.texture, this.tileX, this.tileY, this.tileLarg, this.tileHaut, this.x, this.y, this.largeur, this.hauteur);
+                        this.context.drawImage(this.texture, this.tileX, this.tileY, this.tileLargView, this.tileHaut, this.x + view.x - view.xMap, this.y + view.y - view.yMap, this.largeur - this.largeurView, this.hauteur);
                     }
                 }
             }
         else{
             this.context.strokeStyle = this.color;
-            this.context.strokeRect(this.x, this.y, this.largeur, this.hauteur);
+            this.context.strokeRect(this.x + view.x - view.xMap, this.y + view.y - view.yMap, this.largeur - this.largeurView, this.hauteur);
         }
+        }
+        this.isDraw = true;
     };
     this.move = function (x, y) {
         this.x += x;
@@ -321,8 +381,9 @@ function AnimSprite(x, y, hauteur, largeur, context, tile, tileHaut, tileLarg, o
         this.currentAnim.Value = name;
     };
     
-    this.draw = function(){
-        this.sprite.draw();  
+    this.draw = function(view){
+        var view = view || {x: 0, y: 0, largeur: 1280, hauteur: 720, largIntern: 1, hautIntern: 1, xMap: 0, yMap: 0, exist: false};
+        this.sprite.draw(view);  
     };
     
     this.timeFrame = function(frame, time){
@@ -369,11 +430,11 @@ function Layer(taille, tileset, context, hauteur, largeur){ //tile = image
         
     };
         
-    this.draw = function(){
-        
+    this.draw = function(view){
+        var view = view || {exist: false};
         for(var i = 0; i < this.obj.length; i++)
         {
-            this.obj[i].draw();
+            this.obj[i].draw(view);
         }
     };
     
@@ -426,10 +487,11 @@ function TileMap(path, xhr, context, hauteur, largeur){
         this.image.src = tileset;
     };
     
-    this.draw = function(){
+    this.draw = function(view){
+        var view = view || {exist: false};
         for(var i = 0; i < this.layer.length; i++)
             {
-                this.layer[i].draw();
+                this.layer[i].draw(view);
             }
     };
     
