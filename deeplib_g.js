@@ -152,6 +152,11 @@ function Rect(x, y, hauteur, largeur, /*margin,*/ context, color, stroke, textur
     this.tileLarg = tileLarg || 0;
     this.tileHaut = tileHaut || 0;
     this.tileLargView = 0;
+    this.tileHautView = 0;
+    this.tileXView = 0;
+    this.tileYView = 0;
+    this.xView = 0;
+    this.yView = 0;
     
     this.getCoordView = function(view){
         return {x: this.x - view.xMap, y: this.y - view.yMap};
@@ -167,12 +172,39 @@ function Rect(x, y, hauteur, largeur, /*margin,*/ context, color, stroke, textur
                 this.largeurView = -(view.largeur - relativCoord.x - this.largeur) 
                 this.tileLargView = ( this.tileLarg - (-(view.largeur - relativCoord.x - this.tileLarg)) ) / (this.largeur / this.tileLarg);
             }
-            else if(relativCoord.x > view.largeur)
-                this.isDraw = false;
+            else if(relativCoord.x < this.largeur && relativCoord.x + this.largeur > 0 && relativCoord.x < 0)
+            {
+                this.xView = -relativCoord.x;
+                this.largeurView = -relativCoord.x;
+                this.tileLargView = (relativCoord.x / (this.largeur / this.tileLarg)) + this.tileLarg;
+                this.tileXView = this.tileLarg - -(relativCoord.x) / (this.largeur / this.tileLarg) - this.tileLarg;
+            }
             else{
                 this.largeurView = 0;
+                this.xView = 0;
                 this.tileLargView = this.tileLarg;
+                this.tileXView = 0;
             }
+            if(relativCoord.y + this.hauteur > view.hauteur && relativCoord.y <= view.hauteur)
+                {
+                    this.hauteurView = -(view.hauteur - relativCoord.y - this.hauteur) 
+                    this.tileHautView = ( this.tileHaut - (-(view.hauteur - relativCoord.y - this.tileHaut)) ) / (this.hauteur / this.tileHaut);
+                }
+            else if(relativCoord.y < this.hauteur && relativCoord.y + this.hauteur > 0 && relativCoord.y < 0)
+                {
+                    this.yView = -relativCoord.y;
+                    this.hauteurView = -relativCoord.y;
+                    this.tileHautView = (relativCoord.y / (this.hauteur / this.tileHaut)) + this.tileHaut;
+                    this.tileYView = this.tileHaut- -(relativCoord.y) / (this.hauteur / this.tileHaut) - this.tileHaut;
+                }
+            else{
+                this.hauteurView = 0;
+                this.yView = 0;
+                this.tileHautView = this.tileHaut;
+            }
+            
+            if(relativCoord.x > view.largeur || relativCoord.x + this.largeur < 1 || relativCoord.y > view.hauteur || relativCoord.y + this.hauteur < 1)
+                this.isDraw = false;
         }
 
         if(this.isDraw == true){
@@ -180,24 +212,24 @@ function Rect(x, y, hauteur, largeur, /*margin,*/ context, color, stroke, textur
                 if (this.textureSrc == "yop")
                     {
                         this.context.fillStyle = this.color;
-                        this.context.fillRect(this.x + view.x - view.xMap, this.y + view.y - view.yMap, this.largeur - this.largeurView, this.hauteur);
+                        this.context.fillRect(this.x + view.x - view.xMap + this.xView, this.y + view.y - view.yMap + this.yView, this.largeur - this.largeurView, this.hauteur - this.hauteurView);
                     }
                 else{
                     if(!view.exist){
                         if(!tile)
                             this.context.drawImage(this.texture, this.x, this.y, this.largeur, this.hauteur);
                         else{
-                            this.context.drawImage(this.texture, this.tileX, this.tileY, this.tileLarg, this.tileHaut, this.x + view.x, this.y, this.largeur - this.largeurView, this.hauteur);
+                            this.context.drawImage(this.texture, this.tileX, this.tileY, this.tileLarg, this.tileHaut, this.x, this.y, this.largeur, this.hauteur);
                         }
                     }
                     else{
-                        this.context.drawImage(this.texture, this.tileX, this.tileY, this.tileLargView, this.tileHaut, this.x + view.x - view.xMap, this.y + view.y - view.yMap, this.largeur - this.largeurView, this.hauteur);
+                        this.context.drawImage(this.texture, this.tileX - this.tileXView, this.tileY - this.tileYView, this.tileLargView, this.tileHautView, this.x + view.x - view.xMap + this.xView, this.y + view.y - view.yMap + this.yView, this.largeur - this.largeurView, this.hauteur - this.hauteurView);
                     }
                 }
             }
         else{
             this.context.strokeStyle = this.color;
-            this.context.strokeRect(this.x + view.x - view.xMap, this.y + view.y - view.yMap, this.largeur - this.largeurView, this.hauteur);
+            this.context.strokeRect(this.x + view.x - view.xMap + this.xView, this.y + view.y - view.yMap + this.yView, this.largeur - this.largeurView, this.hauteur - this.hauteurView);
         }
         }
         this.isDraw = true;
