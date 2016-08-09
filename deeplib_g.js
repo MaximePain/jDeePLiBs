@@ -98,16 +98,18 @@ function View(x, y, hauteur, largeur, largIntern, hautIntern, xMap, yMap){ //Int
     this.exist = true;
     this.x = x;
     this.y = y;
-    this.largeur = largeur;
-    this.hauteur = hauteur;
+    this.largeur = largeur / largIntern;
+    this.hauteur = hauteur / hautIntern;
     this.largIntern = largIntern;
     this.hautIntern = hautIntern;
     this.xMap = xMap;
     this.yMap = yMap;
     
     this.draw = function(context){
+        context.scale(this.largIntern, this.hautIntern);
         context.strokeStyle = 'black';
         context.strokeRect(this.x, this.y, this.largeur, this.hauteur);  
+        context.setTransform(1, 0, 0, 1, 0, 0);
     };
     
     this.move = function(x, y){
@@ -200,6 +202,7 @@ function Rect(x, y, hauteur, largeur, /*margin,*/ context, color, stroke, textur
             else{
                 this.hauteurView = 0;
                 this.yView = 0;
+                this.tileYView = 0;
                 this.tileHautView = this.tileHaut;
             }
             
@@ -208,6 +211,7 @@ function Rect(x, y, hauteur, largeur, /*margin,*/ context, color, stroke, textur
         }
 
         if(this.isDraw == true){
+            this.context.scale(view.largIntern, view.hautIntern);
         if (!this.stroke) {
                 if (this.textureSrc == "yop")
                     {
@@ -231,7 +235,9 @@ function Rect(x, y, hauteur, largeur, /*margin,*/ context, color, stroke, textur
             this.context.strokeStyle = this.color;
             this.context.strokeRect(this.x + view.x - view.xMap + this.xView, this.y + view.y - view.yMap + this.yView, this.largeur - this.largeurView, this.hauteur - this.hauteurView);
         }
+            
         }
+        this.context.setTransform(1, 0, 0, 1, 0, 0);
         this.isDraw = true;
     };
     this.move = function (x, y) {
