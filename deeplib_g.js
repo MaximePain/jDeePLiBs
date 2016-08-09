@@ -1,3 +1,4 @@
+//test Branch
 var collisionRectRect = function (A, B) {
     if (B.x - B.margin >= A.x + A.largeur + A.margin
        || B.x + B.largeur + B.margin <= A.x - A.margin
