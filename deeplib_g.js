@@ -92,6 +92,7 @@ function View(x, y, hauteur, largeur, largIntern, hautIntern, xMap, yMap, name, 
     this.hauteur = hauteur;
     this.largIntern = largIntern;
     this.hautIntern = hautIntern;
+    this.angle = 0;
     this.xMap = xMap;
     this.yMap = yMap;
     this.canvas = document.createElement('canvas');
@@ -127,9 +128,15 @@ function View(x, y, hauteur, largeur, largIntern, hautIntern, xMap, yMap, name, 
         this.yMap += y;
     };
     
-    this.scale = function(x, y){
-        if(x == -1 && y == -1)
-            this.context.setTransform(1, 0, 0, 1, 0, 0);
+    this.scale = function(){
+        this.context.scale(this.largIntern, this.hautIntern);
+        this.context.translate(this.canvas.width / 2, this.canvas.height / 2);
+        this.context.rotate(this.angle * Math.PI / 180);
+        this.context.translate(-this.canvas.width / 2, -this.canvas.height / 2);
+    };
+    
+    this.reset = function(){
+        this.context.setTransform(1, 0, 0, 1, 0, 0);
     };
     
     this.clear = function(){
@@ -171,7 +178,7 @@ function Rect(x, y, hauteur, largeur, /*margin, context, */color, stroke, textur
     
     this.draw = function (view) {
         var view = view || {exist: false};
-        view.context.scale(view.largIntern, view.hautIntern);
+        view.scale();
             
 
         if (!this.stroke) {
@@ -192,7 +199,7 @@ function Rect(x, y, hauteur, largeur, /*margin, context, */color, stroke, textur
             view.context.strokeStyle = this.color;
             view.context.strokeRect(this.x - view.xMap, this.y  - view.yMap, this.largeur - this.largeurView, this.hauteur - this.hauteurView);
         }
-        view.scale(-1, -1);
+        view.reset();
     };
     this.move = function (x, y) {
         this.x += x;

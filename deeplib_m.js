@@ -6,6 +6,9 @@ function deepC(){
     var Key = {
         _pressed: {},
             
+            ENTER: 13,
+            ADD: 107,
+            SUB: 109,
             Z: 90,
             Q: 81,
             S: 83,
