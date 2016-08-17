@@ -55,6 +55,12 @@ function deepC(){
         this.Game._intervalId = setInterval(fonction, 1000 / fps);
     }
     
+    this.getIdRoomUrl = function(debut){
+        var idRoom = window.location.pathname;
+        idRoom = idRoom.replace(debut, '');  
+        return idRoom;
+    };
+    
 }
 
 function getXMLHttpRequest() {

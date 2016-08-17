@@ -1,5 +1,6 @@
 //LIB SERVEUR
 
+var game = [];
 
     
 var searchGame = function(idRoom){
@@ -48,7 +49,7 @@ function serv(){
                 {
                     app.get(arg1, function(req, res){
                         var nbGame = searchGame(req.params.idR);
-                        if(nbGame == -1)
+                        if(nbGame != -1)
                         {
                             res.send("EXISTE PAS DSL");
                         }

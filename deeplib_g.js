@@ -100,12 +100,19 @@ function View(x, y, hauteur, largeur, largIntern, hautIntern, xMap, yMap, name, 
     this.canvas.width = largeur;
     this.canvas.height = hauteur;
     this.canvas.style.position = 'absolute';
+    this.canvas.mouseX = 0;
+    this.canvas.mouseY = 0;
     if(this.x != '100%' && this.y != '100%')
         {
             this.canvas.style.top = this.y;
             this.canvas.style.left = this.x;
         }
     document.getElementById(idSup).appendChild(this.canvas);
+    
+    this.canvas.addEventListener('mousemove', function(e){
+        this.mouseX = (e.clientX - parseInt(this.style.left));
+        this.mouseY = (e.clientY - parseInt(this.style.top));
+    });
     
     this.context = this.canvas.getContext('2d');
     
@@ -156,7 +163,7 @@ function Rect(x, y, hauteur, largeur, /*margin, context, */color, stroke, textur
     this.hauteurView = 0;
     this.largeur = largeur;
     this.largeurView = 0;
-    this.isDraw = true;
+    this.angle = 0;
     
     this.margin = 0;
     //this.margin = margin; // a faire
@@ -179,8 +186,7 @@ function Rect(x, y, hauteur, largeur, /*margin, context, */color, stroke, textur
     this.draw = function (view) {
         var view = view || {exist: false};
         view.scale();
-            
-
+        
         if (!this.stroke) {
             if (this.textureSrc == "yop")
             {
@@ -223,6 +229,16 @@ function Rect(x, y, hauteur, largeur, /*margin, context, */color, stroke, textur
         else if(object.boundingType == "Cercle"){
             return collisionRectCercle(this, object);
         }
+    };
+    this.boundingTileObj = function(mapLayer, name){
+        var rtn = false;
+        for(var i = 0; i < mapLayer.obj.length; i++)
+            {
+                if(mapLayer.obj[i].id == name)
+                    if(this.boundingObj(mapLayer.obj[i]))
+                        rtn = true;
+            }
+        return rtn;
     };
 }
 
@@ -296,17 +312,30 @@ function Cercle(x, y, rayon, context, color, stroke, texture){
         else if(object.boundingType == "Cercle")
             return collisionCercCerc(this, object);
     };
+    this.boundingTileObj = function(mapLayer, name){
+        var rtn = false;
+        for(var i = 0; i < mapLayer.obj.length; i++)
+            {
+                if(mapLayer.obj[i].id == name)
+                    if(this.boundingObj(mapLayer.obj[i]))
+                        rtn = true;
+            }
+        return rtn;
+    };
     
 }
 
-function AnimSet(sprite, num1, num2, tileLarg, tileHaut, time){
+function AnimSet(sprite, num1, num2, tileLarg, tileHaut, time, repeat, reverse){
+    var max = false;
     this.sprite = sprite;
     this.num1 = num1;
     this.num2 = num2;
     this.num = {Value:  this.num1};
+    this.reverse = reverse;
     
     this.animStop = true;
-    
+    this.first = true;
+    this.repeat = repeat;
     this.time = [];
     for(var i = num1; i < num2 + 1; i++)
         this.time.push(time);
@@ -317,6 +346,15 @@ function AnimSet(sprite, num1, num2, tileLarg, tileHaut, time){
     
     
     this.anim = function(obj){
+        //console.log(obj.num.Value);
+        if(obj.first)
+            {
+                obj.first = false;
+                if(obj.reverse)
+                    obj.num.Value = obj.num2;
+                else
+                    obj.num.Value = obj.num1;
+            }
         var xy = numTile(obj.num.Value, obj.sprite.texture.width, obj.tileLarg, obj.tileHaut);
         var x = xy.x;
         var y = xy.y;
@@ -325,14 +363,33 @@ function AnimSet(sprite, num1, num2, tileLarg, tileHaut, time){
         obj.sprite.tileHaut = obj.tileHaut;
         obj.sprite.tileX = x;
         obj.sprite.tileY = y;
+        
+        
         if(!obj.animStop){
             //console.log('num: ' + obj.num.Value + '  time: ' +  obj.time[obj.num.Value]);
-        
-            if(obj.num.Value + obj.num1 < obj.num2)
-                obj.num.Value++;
+            if(!obj.reverse)
+                if(obj.num.Value < obj.num2)
+                    obj.num.Value++;
+                else
+                    max = true;
             else
-                obj.num.Value = obj.num1;
-            setTimeout(obj.anim, obj.time[obj.num.Value], obj);
+                if(obj.num.Value > obj.num1)
+                    obj.num.Value--;   
+                else
+                    max = true;
+            if(max)
+                {
+                    max = false;
+                    if(obj.repeat)
+                        if(obj.reverse)
+                            obj.num.Value = obj.num2;
+                        else
+                            obj.num.Value = obj.num1;
+                    else
+                        obj.animStop = true;
+                }
+
+            setTimeout(obj.anim, obj.time[obj.num.Value - obj.num1], obj);
         }
     };
 }
@@ -355,23 +412,40 @@ function AnimSprite(x, y, hauteur, largeur, tile, tileHaut, tileLarg, objectType
         this.sprite = new Rect(this.x, this.y, this.hauteur, this.largeur, "black", false, this.tile, true);
 
     
-    this.startAnim = function(){
+    this.startAnim = function(blockReset){
+        var blockReset = blockReset || false;
         if(this.animLs[this.currentAnim.Value].animStop != false){
             this.animLs[this.currentAnim.Value].animStop = false;
+            if(blockReset)
+                this.animLs[this.currentAnim.Value].first = false;
             this.animLs[this.currentAnim.Value].anim(this.animLs[this.currentAnim.Value]);
         }
     };
     
-    this.stopAnim = function(){
+    this.stopAnim = function(reset){
+        if(reset)
+            this.animLs[this.currentAnim.Value].first = true;
         this.animLs[this.currentAnim.Value].animStop = true;
+    };
+    
+    this.getFrame = function(){
+        return this.animLs[this.currentAnim.Value].num.Value;
     };
     
     this.setFrame = function(nb){
         this.animLs[this.currentAnim.Value].num.Value = nb;
     }
     
-    this.addAnim = function(name, num1, num2, time){
-        this.animLs[name] = new AnimSet(this.sprite, num1, num2, this.tileLarg, this.tileHaut, time);
+    this.addAnim = function(name, num1, num2, time, repeat, reverse){
+        this.animLs[name] = new AnimSet(this.sprite, num1, num2, this.tileLarg, this.tileHaut, time, repeat, reverse);
+    };
+    
+    this.isPlaying = function(){
+        return !this.animLs[this.currentAnim.Value].animStop;
+    };
+    
+    this.setReverse = function(reverse){
+        this.animLs[this.currentAnim.Value].reverse = reverse;
     };
     
     this.set = function(name){
@@ -386,6 +460,18 @@ function AnimSprite(x, y, hauteur, largeur, tile, tileHaut, tileLarg, objectType
     
     this.timeFrame = function(frame, time){
           this.animLs[this.currentAnim.Value].time[frame] = time;
+    };
+    
+    this.move = function(x, y){
+        this.sprite.move(x, y);
+    };
+    
+    this.boundingObj = function(object){
+        return this.sprite.boundingObj(object);
+    };
+    
+    this.boundingTileObj = function(mapLayer, name){
+        return this.sprite.boundingTileObj(mapLayer, name);
     };
     
     this.addAnim("NULL", 0, 0, 1000);
@@ -409,16 +495,21 @@ function Layer(taille, tileset, hauteur, largeur){ //tile = image
         
     this.createObj = function(xPos, yPos, taille, num, type){
         var objType = type || "Rect";
-        
+        var name = "";
         var xy = numTile(num, this.tile.width, taille, taille);
                
         var x = xy.x;
         var y = xy.y;
         
+        for(var id in objType)
+            for(var i = 0; i < objType[id].length; i++)
+                    if(objType[id][i] == num)
+                        name = id;
+        
         if(num != -1)
             {
                 this.obj.push(new Rect(xPos, yPos, this.hauteur, this.largeur, "NULL", false, this.tile, true, x, y, taille, taille));
-                this.obj[this.obj.length - 1].id = objType;
+                this.obj[this.obj.length - 1].id = name;
             }
         else{
             this.obj.push(new Rect(xPos, yPos, this.hauteur, this.largeur, "rgba(0, 0, 0, 0)"));
@@ -435,18 +526,31 @@ function Layer(taille, tileset, hauteur, largeur){ //tile = image
         }
     };
     
-    this.createLayer = function(terrain){
+    this.boundingId = function(){
+        
+    };
+    
+    this.getObjById = function(id){
+        for(var i = 0; i < this.obj.length; i++)
+            {
+                if(id == this.obj[i].id)
+                    return this.obj[i];
+            }
+    };
+    
+    this.createLayer = function(terrain, type){
         for(var i = 0; i < terrain.length; i++)
             {   
                 var y = i * this.hauteur;
                 for(var j = 0; j < terrain[i].length; j++){
-                    this.createObj(j * this.largeur, y, this.taille, terrain[j][i]);
+                    this.createObj(j * this.largeur, y, this.taille, terrain[j][i], type);
                 }
             }
     };
 }
 
 function TileMap(path, xhr, hauteur, largeur){
+    this.loadingDone = false;
     this.path = path;
     this.layer = [];
     this.xhr = xhr;
@@ -468,6 +572,8 @@ function TileMap(path, xhr, hauteur, largeur){
         var taille = mapData.taille;
         var tileset = mapData.tileset;
         var terrain = mapData.map;
+        var exception = mapData.exception;
+        
         
         this.image.obj = this;
         
@@ -475,13 +581,18 @@ function TileMap(path, xhr, hauteur, largeur){
             for(var i = 0; i < nbLayer; i++)
             {
                 this.obj.layer.push(new Layer(taille, this, this.obj.hauteur, this.obj.largeur));
-                this.obj.layer[i].createLayer(terrain[i]);
+                this.obj.layer[i].createLayer(terrain[i], exception);
+                this.obj.loadingDone = true;
             }
         };
         
         //this.image.addEventListener('load', this.start(this.layer, this.image, this.context, this.hauteur, this.largeur));
         this.image.src = tileset;
     };
+    
+    this.retLayer = function(nb){
+        return this.layer[nb];
+    }
     
     this.draw = function(view){
         var view = view || {exist: false};
