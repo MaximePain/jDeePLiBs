@@ -492,13 +492,14 @@ function Particle(coord, angleVar, speedVar, lifetime){ // *Var != variable / *V
     this.alive = true;
     this.color = 'black';
     this.obj = new Rect(this.x, this.y, this.height, this.width, this.color, false);
+    this.toggleRepeat = {angle: false};
     
     if(!this.speedVar.random)
         this.speed = (Math.random() * (this.speedVar.max - this.speedVar.min ) ) + this.speedVar.min;
     
     if(!this.angleVar.random)
         this.angle = (Math.random() * (this.angleVar.max - this.angleVar.min ) ) + this.angleVar.min;
-    
+
     this.update = function(obj){
         obj.lifetime--;
         //console.log('lifetime: ' + obj.lifetime);
@@ -509,9 +510,32 @@ function Particle(coord, angleVar, speedVar, lifetime){ // *Var != variable / *V
                 else{
                     if(obj.angle < 0)
                         obj.angle = obj.angleVar.min;
-                    else if(obj.angle <= obj.angleVar.max)
-                        obj.angle += obj.angleVar.increase;
+                    else if(obj.angleVar.repeat){
+                        if(obj.toggleRepeat.angle){
+                            if(obj.angle > obj.angleVar.min)
+                                obj.angle -= obj.angleVar.increase;
+                            else
+                                obj.toggleRepeat.angle = false;
+                        }
+                        else{
+                            if(obj.angle <= obj.angleVar.max)
+                                obj.angle += obj.angleVar.increase;
+                            else
+                                obj.toggleRepeat.angle = true;
+                        }
+                    }
+                    else{
+                        if(obj.angle <= obj.angleVar.max)
+                            obj.angle += obj.angleVar.increase;
+                    }
                 }
+                if(obj.angleVar.increaseDir != 0)
+                    {
+                        if(obj.angle > obj.angleVar.increaseDir)
+                            obj.angle -= obj.angleVar.increaseForce;
+                        else
+                            obj.angle += obj.angleVar.increaseForce;
+                    }
             
                 if(obj.speedVar.random)
                     obj.speed = (Math.random() * (obj.speedVar.max - obj.speedVar.min ) ) + obj.speedVar.min;
@@ -521,6 +545,7 @@ function Particle(coord, angleVar, speedVar, lifetime){ // *Var != variable / *V
                     else if(obj.speed <= obj.speedVar.max)
                         obj.speed += obj.speedVar.increase;
                 }
+                
                 obj.obj.move(Math.cos(obj.angle * (Math.PI / 180)).toFixed(5) * obj.speed, Math.sin(obj.angle * (Math.PI / 180)).toFixed(5) * obj.speed);
                 
                 setTimeout(obj.update, obj.speed, obj);
@@ -547,7 +572,7 @@ function ParticleEmitter(system){
     this.lifetime;
     
     this.update = function(obj){
-        obj.system.particle.push(new Particle({x: obj.x, y: obj.y}, {min: obj.angleParticle.min + obj.angle, max: obj.angleParticle.max + obj.angle, random: obj.angleParticle.random, increase: obj.angleParticle.increase}, obj.speedParticle, obj.lifetime));
+        obj.system.particle.push(new Particle({x: obj.x, y: obj.y}, {min: obj.angleParticle.min + obj.angle, max: obj.angleParticle.max + obj.angle, random: obj.angleParticle.random, increase: obj.angleParticle.increase, increaseDir: obj.angleParticle.increaseDir + obj.angle, increaseForce: obj.angleParticle.increaseForce, repeat: obj.angleParticle.repeat}, obj.speedParticle, obj.lifetime));
         obj.system.particle[obj.system.particle.length - 1].system = obj.system; 
         //console.log(obj.system.particle[obj.system.particle.length - 1]);
         obj.system.particle[obj.system.particle.length - 1].update(obj.system.particle[obj.system.particle.length - 1]);
