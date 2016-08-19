@@ -72,9 +72,7 @@ var numTile = function(num, imageLarg, tileLarg, tileHaut){
     return {x: x, y: y};
 };
 
-
-function point(x, y)
-{
+function point(x, y){
     this.x = x;
     this.y = y;
 }
@@ -100,8 +98,8 @@ function View(x, y, hauteur, largeur, largIntern, hautIntern, xMap, yMap, name, 
     this.canvas.width = largeur;
     this.canvas.height = hauteur;
     this.canvas.style.position = 'absolute';
-    this.canvas.mouseX = 0;
-    this.canvas.mouseY = 0;
+    //this.canvas.mouseX = 0;
+    //this.canvas.mouseY = 0;
     if(this.x != '100%' && this.y != '100%')
         {
             this.canvas.style.top = this.y;
@@ -109,10 +107,10 @@ function View(x, y, hauteur, largeur, largIntern, hautIntern, xMap, yMap, name, 
         }
     document.getElementById(idSup).appendChild(this.canvas);
     
-    this.canvas.addEventListener('mousemove', function(e){
+    /*this.canvas.onmousemove = function(e){
         this.mouseX = (e.clientX - parseInt(this.style.left));
         this.mouseY = (e.clientY - parseInt(this.style.top));
-    });
+    };*/
     
     this.context = this.canvas.getContext('2d');
     
@@ -203,7 +201,7 @@ function Rect(x, y, hauteur, largeur, /*margin, context, */color, stroke, textur
         }
         else{
             view.context.strokeStyle = this.color;
-            view.context.strokeRect(this.x - view.xMap, this.y  - view.yMap, this.largeur - this.largeurView, this.hauteur - this.hauteurView);
+            view.context.strokeRect(this.x - view.xMap, this.y - view.yMap, this.largeur - this.largeurView, this.hauteur - this.hauteurView);
         }
         view.reset();
     };
@@ -479,6 +477,116 @@ function AnimSprite(x, y, hauteur, largeur, tile, tileHaut, tileLarg, objectType
     
 }
 
+function Particle(coord, angleVar, speedVar, lifetime){ // *Var != variable / *Var == variation    Var: min: x, max: x, random: true || false, increase: x
+    this.view = view;
+    this.system = 0;
+    this.x = coord.x;
+    this.y = coord.y;
+    this.height = 10;
+    this.width = 10;
+    this.speedVar = speedVar;
+    this.speed = 0;
+    this.angleVar = angleVar;
+    this.angle = -1;
+    this.lifetime = lifetime; //variation plus tard
+    this.alive = true;
+    this.color = 'black';
+    this.obj = new Rect(this.x, this.y, this.height, this.width, this.color, false);
+    
+    if(!this.speedVar.random)
+        this.speed = (Math.random() * (this.speedVar.max - this.speedVar.min ) ) + this.speedVar.min;
+    
+    if(!this.angleVar.random)
+        this.angle = (Math.random() * (this.angleVar.max - this.angleVar.min ) ) + this.angleVar.min;
+    
+    this.update = function(obj){
+        obj.lifetime--;
+        //console.log('lifetime: ' + obj.lifetime);
+        if(obj.lifetime > 0)
+            {
+                if(obj.angleVar.random)
+                    obj.angle = (Math.random() * (obj.angleVar.max - obj.angleVar.min) ) + obj.angleVar.min;
+                else{
+                    if(obj.angle < 0)
+                        obj.angle = obj.angleVar.min;
+                    else if(obj.angle <= obj.angleVar.max)
+                        obj.angle += obj.angleVar.increase;
+                }
+            
+                if(obj.speedVar.random)
+                    obj.speed = (Math.random() * (obj.speedVar.max - obj.speedVar.min ) ) + obj.speedVar.min;
+                else{
+                    if(obj.speed == 0)
+                        obj.speed = obj.speedVar.min;
+                    else if(obj.speed <= obj.speedVar.max)
+                        obj.speed += obj.speedVar.increase;
+                }
+                obj.obj.move(Math.cos(obj.angle * (Math.PI / 180)).toFixed(5) * obj.speed, Math.sin(obj.angle * (Math.PI / 180)).toFixed(5) * obj.speed);
+                
+                setTimeout(obj.update, obj.speed, obj);
+            }
+        else{
+            delete obj;
+            obj.system.deleteParticle(obj);
+        }
+    };
+    
+    this.draw = function(view){
+        this.obj.draw(view);
+    }
+}
+
+function ParticleEmitter(system){
+    this.system = system;
+    this.x = 0;
+    this.y = 0;
+    this.speed = 100;
+    this.speedParticle;
+    this.angle = 0;
+    this.angleParticle;
+    this.lifetime;
+    
+    this.update = function(obj){
+        obj.system.particle.push(new Particle({x: obj.x, y: obj.y}, {min: obj.angleParticle.min + obj.angle, max: obj.angleParticle.max + obj.angle, random: obj.angleParticle.random, increase: obj.angleParticle.increase}, obj.speedParticle, obj.lifetime));
+        obj.system.particle[obj.system.particle.length - 1].system = obj.system; 
+        //console.log(obj.system.particle[obj.system.particle.length - 1]);
+        obj.system.particle[obj.system.particle.length - 1].update(obj.system.particle[obj.system.particle.length - 1]);
+        setTimeout(obj.update, obj.speed, obj);
+    };
+    
+    this.start = function(){
+        this.update(this);
+    };
+}
+
+function ParticleSystem(){
+    this.particle = [];
+    this.emitter = [];
+    this.particleDelete = [];
+    
+    this.update = function(obj){
+        if(obj.particle.length != 0)
+            for(var i = 0; i < obj.particle.length; i++)
+                if(obj.particle[0] === undefined)
+                    obj.particle.shift();
+        
+        setTimeout(obj.update, 100, obj);
+    };
+    
+    this.deleteParticle = function(particle){
+        for(var i = 0; i < this.particle.length; i++)
+            if(this.particle[i] === particle)
+                delete this.particle[i];
+    };
+    
+    this.draw = function(view){
+        for(var i = 0; i < this.particle.length; i++)
+            if(this.particle[i] !== undefined)
+                this.particle[i].draw(view);
+    };
+    
+    this.update(this);
+}
 
 function Layer(taille, tileset, hauteur, largeur){ //tile = image
     this.taille = taille;
