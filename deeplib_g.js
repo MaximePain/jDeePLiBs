@@ -494,7 +494,7 @@ function Particle(coord, angleVar, speedVar, lifetime){ // *Var != variable / *V
     this.obj = new Rect(this.x, this.y, this.height, this.width, this.color, false);
     this.toggleRepeat = {angle: false};
     
-    if(!this.speedVar.random)
+    if(!this.speedVar.random && this.speedVar.increase == 0)
         this.speed = (Math.random() * (this.speedVar.max - this.speedVar.min ) ) + this.speedVar.min;
     
     if(!this.angleVar.random)
@@ -548,7 +548,8 @@ function Particle(coord, angleVar, speedVar, lifetime){ // *Var != variable / *V
                 
                 obj.obj.move(Math.cos(obj.angle * (Math.PI / 180)).toFixed(5) * obj.speed, Math.sin(obj.angle * (Math.PI / 180)).toFixed(5) * obj.speed);
                 
-                setTimeout(obj.update, obj.speed, obj);
+                
+                //setTimeout(obj.update, 1, obj);
             }
         else{
             delete obj;
@@ -571,12 +572,33 @@ function ParticleEmitter(system){
     this.angleParticle;
     this.lifetime;
     
+    this.alive = true;
+    
     this.update = function(obj){
-        obj.system.particle.push(new Particle({x: obj.x, y: obj.y}, {min: obj.angleParticle.min + obj.angle, max: obj.angleParticle.max + obj.angle, random: obj.angleParticle.random, increase: obj.angleParticle.increase, increaseDir: obj.angleParticle.increaseDir + obj.angle, increaseForce: obj.angleParticle.increaseForce, repeat: obj.angleParticle.repeat}, obj.speedParticle, obj.lifetime));
+        
+        obj.system.particle.push(new Particle({x: obj.x, y: obj.y}, {min: obj.angleParticle.min + obj.angle, 
+                                                                     max: obj.angleParticle.max + obj.angle, 
+                                                                     random: obj.angleParticle.random, 
+                                                                     increase: obj.angleParticle.increase, 
+                                                                     increaseDir: obj.angleParticle.increaseDir + obj.angle, 
+                                                                     increaseForce: obj.angleParticle.increaseForce, 
+                                                                     repeat: obj.angleParticle.repeat}, 
+                                              obj.speedParticle, obj.lifetime));
+        
         obj.system.particle[obj.system.particle.length - 1].system = obj.system; 
         //console.log(obj.system.particle[obj.system.particle.length - 1]);
         obj.system.particle[obj.system.particle.length - 1].update(obj.system.particle[obj.system.particle.length - 1]);
-        setTimeout(obj.update, obj.speed, obj);
+        if(obj.alive){
+            setTimeout(obj.update, obj.speed, obj);
+        }
+        else{
+            delete obj;
+            obj.system.deleteEmitter(obj);
+        }
+    };
+    
+    this.delete = function(){
+          this.alive = false
     };
     
     this.start = function(){
@@ -595,13 +617,33 @@ function ParticleSystem(){
                 if(obj.particle[0] === undefined)
                     obj.particle.shift();
         
-        setTimeout(obj.update, 100, obj);
+        if(obj.emitter.length != 0)
+            for(var i = 0; i < obj.emitter.length; i++)
+                if(obj.emitter[0] === undefined)
+                    obj.emitter.shift();
+        
+        setTimeout(obj.update, 1000, obj);
+    };
+    
+    this.particleUpdate = function(obj){
+        if(obj.particle.length != 0)
+            for(var i = 0; i < obj.particle.length; i++)
+                if(obj.particle[i] !== undefined)
+                    obj.particle[i].update(obj.particle[i]);
+        
+        setTimeout(obj.particleUpdate, 1, obj);
     };
     
     this.deleteParticle = function(particle){
         for(var i = 0; i < this.particle.length; i++)
             if(this.particle[i] === particle)
                 delete this.particle[i];
+    };
+    
+    this.deleteEmitter = function(emitter){
+        for(var i = 0; i < this.particle.length; i++)
+            if(this.emitter[i] === emitter)
+                delete this.emitter[i];
     };
     
     this.draw = function(view){
@@ -611,6 +653,7 @@ function ParticleSystem(){
     };
     
     this.update(this);
+    this.particleUpdate(this);
 }
 
 function Layer(taille, tileset, hauteur, largeur){ //tile = image
