@@ -493,6 +493,7 @@ function Particle(coord, angleVar, speedVar, lifetime){ // *Var != variable / *V
     this.color = 'black';
     this.obj = new Rect(this.x, this.y, this.height, this.width, this.color, false);
     this.toggleRepeat = {angle: false};
+    this.collObj;
     
     if(!this.speedVar.random && this.speedVar.increase == 0)
         this.speed = (Math.random() * (this.speedVar.max - this.speedVar.min ) ) + this.speedVar.min;
@@ -547,7 +548,15 @@ function Particle(coord, angleVar, speedVar, lifetime){ // *Var != variable / *V
                 }
                 
                 obj.obj.move(Math.cos(obj.angle * (Math.PI / 180)).toFixed(5) * obj.speed, Math.sin(obj.angle * (Math.PI / 180)).toFixed(5) * obj.speed);
-                
+                obj.collObj = obj.system.particleBoundingObj(obj.obj);
+                if(obj.collObj != null)
+                    {
+                        obj.obj.move(-Math.cos(obj.angle * (Math.PI / 180)).toFixed(5) * obj.speed, -Math.sin(obj.angle * (Math.PI / 180)).toFixed(5) * obj.speed);
+                        if(obj.collObj.type == 'Rect')
+                            {
+                                
+                            }
+                    }
                 
                 //setTimeout(obj.update, 1, obj);
             }
@@ -610,6 +619,7 @@ function ParticleSystem(){
     this.particle = [];
     this.emitter = [];
     this.particleDelete = [];
+    this.collObj = [];
     
     this.update = function(obj){
         if(obj.particle.length != 0)
@@ -650,6 +660,18 @@ function ParticleSystem(){
         for(var i = 0; i < this.particle.length; i++)
             if(this.particle[i] !== undefined)
                 this.particle[i].draw(view);
+    };
+    
+    this.addCollObj = function(newObj){
+        this.collObj = this.collObj.concat(newObj);
+    };
+    
+    this.particleBoundingObj = function(obj){
+        for(var i = 0; i < this.collObj.length; i++){
+            if(obj.boundingObj(this.collObj[i]))
+                return this.collObj[i];
+        }
+        return null;
     };
     
     this.update(this);
